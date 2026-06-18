@@ -1,0 +1,53 @@
+import asyncio
+from contextlib import asynccontextmanager
+
+from aiogram.types import Update
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.config import settings
+from app.bot.bot_instance import bot, dp
+from app.bot.handlers import routers
+from app.services.reminder_service import reminder_loop
+from app.api.routes import users, venues, events, applications
+
+for r in routers:
+    dp.include_router(r)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    webhook_url = settings.webhook_base_url.rstrip("/") + settings.webhook_path
+    await bot.set_webhook(webhook_url)
+    reminder_task = asyncio.create_task(reminder_loop())
+    yield
+    reminder_task.cancel()
+    await bot.delete_webhook()
+
+
+app = FastAPI(title="Sport Meetup API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(users.router)
+app.include_router(venues.router)
+app.include_router(events.router)
+app.include_router(applications.router)
+
+
+@app.post(settings.webhook_path)
+async def telegram_webhook(request: Request):
+    update = Update.model_validate(await request.json(), context={"bot": bot})
+    await dp.feed_update(bot, update)
+    return {"ok": True}
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}

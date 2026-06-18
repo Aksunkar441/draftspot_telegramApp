@@ -1,0 +1,47 @@
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.event import Event, EventStatus
+from app.models.application import EventApplication, ApplicationStatus
+
+
+async def accept_application(session: AsyncSession, application: EventApplication) -> bool:
+    """
+    Атомарно уменьшает количество свободных мест и принимает заявку.
+    UPDATE ... WHERE slots_available > 0 выполняется одним запросом —
+    PostgreSQL сам блокирует строку события на долю секунды, поэтому
+    два параллельных accept() на последнее место не уйдут оба в плюс.
+    Возвращает False, если мест уже не осталось.
+    """
+    result = await session.execute(
+        update(Event)
+        .where(Event.id == application.event_id, Event.slots_available > 0)
+        .values(slots_available=Event.slots_available - 1)
+        .returning(Event.id, Event.slots_available)
+    )
+    row = result.first()
+    if row is None:
+        return False
+
+    application.status = ApplicationStatus.accepted
+
+    if row.slots_available == 0:
+        event = await session.get(Event, application.event_id)
+        event.status = EventStatus.full
+
+    await session.commit()
+    return True
+
+
+async def cancel_acceptance(session: AsyncSession, application: EventApplication) -> None:
+    """Возвращает свободное место при отмене игроком или исключении капитаном."""
+    if application.status == ApplicationStatus.accepted:
+        await session.execute(
+            update(Event)
+            .where(Event.id == application.event_id)
+            .values(slots_available=Event.slots_available + 1, status=EventStatus.open)
+        )
+
+    application.status = ApplicationStatus.cancelled
+    application.responded_at = None
+    await session.commit()
