@@ -28,5 +28,8 @@ class Venue(Base):
     longitude: Mapped[float] = mapped_column(Float)
     is_paid: Mapped[bool] = mapped_column(Boolean, default=False)
     price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    status: Mapped[VenueStatus] = mapped_column(SAEnum(VenueStatus), default=VenueStatus.free)
+    status: Mapped[VenueStatus] = mapped_column(
+        SAEnum(VenueStatus, name="venue_status", create_type=False),
+        default=VenueStatus.free,
+    )
     address: Mapped[str | None] = mapped_column(String(300), nullable=True)

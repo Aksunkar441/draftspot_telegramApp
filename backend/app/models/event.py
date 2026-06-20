@@ -28,7 +28,10 @@ class Event(Base):
     price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     slots_total: Mapped[int] = mapped_column(Integer)
     slots_available: Mapped[int] = mapped_column(Integer)
-    status: Mapped[EventStatus] = mapped_column(SAEnum(EventStatus), default=EventStatus.open)
+    status: Mapped[EventStatus] = mapped_column(
+        SAEnum(EventStatus, name="event_status", create_type=False),
+        default=EventStatus.open,
+    )
     reminder_sent: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
