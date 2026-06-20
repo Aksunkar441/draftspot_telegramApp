@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     mini_app_url: str | None = None
     webhook_path: str = "/bot/webhook"
     default_city: str = "Тараз"
+    serverless: bool = False
 
     @property
     def effective_mini_app_url(self) -> str:

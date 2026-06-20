@@ -22,10 +22,13 @@ async def lifespan(app: FastAPI):
     reminder_task = asyncio.create_task(reminder_loop())
     yield
     reminder_task.cancel()
-    await bot.delete_webhook()
+    await bot.session.close()
 
 
-app = FastAPI(title="Sport Meetup API", lifespan=lifespan)
+app = FastAPI(
+    title="Sport Meetup API",
+    lifespan=None if settings.serverless else lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
