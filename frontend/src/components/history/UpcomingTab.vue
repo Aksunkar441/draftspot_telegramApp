@@ -1,11 +1,16 @@
 <template>
   <div class="list">
+    <p v-if="loading" class="empty">Загружаем игры...</p>
+    <div v-else-if="error" class="empty">
+      <p>{{ error }}</p>
+      <button @click="load">Повторить</button>
+    </div>
     <div v-for="app in applications" :key="app.id" class="item">
       <p>{{ app.event.venue.name }} — {{ app.event.sport_type || "без вида спорта" }}</p>
       <p v-if="app.event.scheduled_at">{{ new Date(app.event.scheduled_at).toLocaleString("ru-RU") }}</p>
-      <button @click="cancel(app.id)">Отменить</button>
+      <button :disabled="actionLoading" @click="cancel(app.id)">Отменить</button>
     </div>
-    <p v-if="!applications.length" class="empty">Нет предстоящих игр</p>
+    <p v-if="!loading && !error && !applications.length" class="empty">Нет предстоящих игр</p>
   </div>
 </template>
 
@@ -14,14 +19,33 @@ import { ref, onMounted } from "vue";
 import { getUpcoming, cancelApplication } from "../../api/applications";
 
 const applications = ref([]);
+const loading = ref(false);
+const actionLoading = ref(false);
+const error = ref("");
 
 async function load() {
-  applications.value = await getUpcoming();
+  loading.value = true;
+  error.value = "";
+  try {
+    applications.value = await getUpcoming();
+  } catch {
+    error.value = "Не удалось загрузить игры";
+  } finally {
+    loading.value = false;
+  }
 }
 
 async function cancel(id) {
-  await cancelApplication(id);
-  await load();
+  actionLoading.value = true;
+  error.value = "";
+  try {
+    await cancelApplication(id);
+    await load();
+  } catch {
+    error.value = "Не удалось отменить участие";
+  } finally {
+    actionLoading.value = false;
+  }
 }
 
 onMounted(load);
@@ -43,5 +67,8 @@ onMounted(load);
 .empty {
   text-align: center;
   color: #888;
+}
+button:disabled {
+  opacity: 0.65;
 }
 </style>

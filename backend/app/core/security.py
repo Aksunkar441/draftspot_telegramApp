@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+from datetime import datetime, timezone
 from urllib.parse import parse_qsl
 
 from app.config import settings
@@ -27,6 +28,15 @@ def validate_init_data(init_data: str) -> dict | None:
     calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
 
     if not hmac.compare_digest(calculated_hash, received_hash):
+        return None
+
+    try:
+        auth_date = datetime.fromtimestamp(int(parsed["auth_date"]), tz=timezone.utc)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+    age_seconds = (datetime.now(timezone.utc) - auth_date).total_seconds()
+    if age_seconds < 0 or age_seconds > settings.init_data_max_age_seconds:
         return None
 
     return parsed

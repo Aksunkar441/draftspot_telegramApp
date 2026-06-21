@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     mini_app_url: str | None = None
     webhook_path: str = "/bot/webhook"
     default_city: str = "Тараз"
+    init_data_max_age_seconds: int = 24 * 60 * 60
     serverless: bool = False
 
     @property

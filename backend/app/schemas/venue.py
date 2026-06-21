@@ -9,6 +9,7 @@ class VenueOut(BaseModel):
     id: int
     name: str
     sport_type: str | None
+    city: str
     latitude: float
     longitude: float
     is_paid: bool

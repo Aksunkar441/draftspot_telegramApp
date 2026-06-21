@@ -10,8 +10,10 @@ export const useEventsStore = defineStore("events", {
     cursor: 0,
     nextCursor: null,
     loading: false,
+    actionLoading: false,
     exhausted: false,
     error: null,
+    actionError: null,
   }),
   getters: {
     current(state) {
@@ -42,7 +44,6 @@ export const useEventsStore = defineStore("events", {
         this.exhausted = page.next_cursor === null;
       } catch (error) {
         this.error = error;
-        throw error;
       } finally {
         this.loading = false;
       }
@@ -60,9 +61,17 @@ export const useEventsStore = defineStore("events", {
     async join() {
       const event = this.current;
       if (!event) return;
-      await joinEvent(event.id);
-      this.cursor += 1;
-      await this.ensureBuffered();
+      this.actionLoading = true;
+      this.actionError = null;
+      try {
+        await joinEvent(event.id);
+        this.cursor += 1;
+        await this.ensureBuffered();
+      } catch (error) {
+        this.actionError = error.response?.data?.detail ?? "Не удалось отправить заявку";
+      } finally {
+        this.actionLoading = false;
+      }
     },
   },
 });

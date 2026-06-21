@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.event import EventStatus
 from app.models.application import ApplicationStatus
@@ -13,7 +13,24 @@ class EventCreate(BaseModel):
     group_link: str | None = None
     scheduled_at: datetime | None = None
     price: float | None = None
-    slots_total: int
+    slots_total: int = Field(ge=1, le=100)
+
+    @field_validator("sport_type", "group_link", mode="before")
+    @classmethod
+    def blank_string_to_none(cls, value: str | None) -> str | None:
+        if isinstance(value, str):
+            value = value.strip()
+            return value or None
+        return value
+
+    @field_validator("group_link")
+    @classmethod
+    def group_link_must_be_safe(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if not (value.startswith("https://t.me/") or value.startswith("https://telegram.me/")):
+            raise ValueError("Ссылка на группу должна быть Telegram-ссылкой")
+        return value
 
     @field_validator("scheduled_at")
     @classmethod

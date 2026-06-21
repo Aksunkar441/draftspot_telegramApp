@@ -21,6 +21,7 @@ create table venues (
     id bigserial primary key,
     name varchar(200) not null,
     sport_type varchar(100),
+    city varchar(100) not null default 'Тараз',
     latitude double precision not null,
     longitude double precision not null,
     is_paid boolean default false,
@@ -59,4 +60,6 @@ create index idx_events_captain on events(captain_id);
 create index idx_applications_event on event_applications(event_id);
 create index idx_applications_user on event_applications(user_id);
 create index idx_events_feed on events(status, id desc);
+create index idx_events_status_scheduled_at on events(status, scheduled_at);
 create index idx_applications_user_event on event_applications(user_id, event_id);
+create index idx_venues_city on venues(city);

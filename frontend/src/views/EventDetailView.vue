@@ -12,13 +12,18 @@
       <div v-for="app in event.applicants" :key="app.id" class="applicant">
         <span>{{ app.user_name }} — {{ statusLabel(app.status) }}</span>
         <div v-if="app.status === 'pending'" class="buttons">
-          <button @click="accept(app.id)">Принять</button>
-          <button @click="decline(app.id)">Отклонить</button>
+          <button :disabled="actionLoading" @click="accept(app.id)">Принять</button>
+          <button :disabled="actionLoading" @click="decline(app.id)">Отклонить</button>
         </div>
-        <button v-else-if="app.status === 'accepted'" @click="kick(app.id)">Исключить</button>
+        <button v-else-if="app.status === 'accepted'" :disabled="actionLoading" @click="kick(app.id)">Исключить</button>
       </div>
       <p v-if="!event.applicants.length" class="empty">Заявок пока нет</p>
     </div>
+  </div>
+  <p v-else-if="loading" class="empty">Загружаем событие...</p>
+  <div v-else class="empty">
+    <p>{{ error || "Событие не найдено" }}</p>
+    <button @click="load">Повторить</button>
   </div>
 </template>
 
@@ -30,6 +35,9 @@ import { useUserStore } from "../stores/user";
 
 const props = defineProps({ id: { type: [String, Number], required: true } });
 const event = ref(null);
+const loading = ref(false);
+const actionLoading = ref(false);
+const error = ref("");
 const userStore = useUserStore();
 
 const isCaptain = computed(
@@ -41,20 +49,39 @@ function statusLabel(status) {
 }
 
 async function load() {
-  event.value = await getEvent(props.id);
+  loading.value = true;
+  error.value = "";
+  try {
+    event.value = await getEvent(props.id);
+  } catch {
+    event.value = null;
+    error.value = "Не удалось открыть событие";
+  } finally {
+    loading.value = false;
+  }
 }
 
 async function accept(appId) {
-  await acceptApplication(appId);
-  await load();
+  await runAction(() => acceptApplication(appId));
 }
 async function decline(appId) {
-  await declineApplication(appId);
-  await load();
+  await runAction(() => declineApplication(appId));
 }
 async function kick(appId) {
-  await kickPlayer(appId);
-  await load();
+  await runAction(() => kickPlayer(appId));
+}
+
+async function runAction(action) {
+  actionLoading.value = true;
+  error.value = "";
+  try {
+    await action();
+    await load();
+  } catch (e) {
+    error.value = e.response?.data?.detail ?? "Не удалось выполнить действие";
+  } finally {
+    actionLoading.value = false;
+  }
 }
 
 onMounted(load);
@@ -80,5 +107,10 @@ onMounted(load);
 }
 .empty {
   color: #888;
+  padding: 16px;
+  text-align: center;
+}
+button:disabled {
+  opacity: 0.65;
 }
 </style>

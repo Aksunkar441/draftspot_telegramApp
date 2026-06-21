@@ -10,8 +10,10 @@ from app.database import get_session
 from app.models.event import Event, EventStatus
 from app.models.application import EventApplication, ApplicationStatus
 from app.models.user import User
+from app.models.venue import Venue
 from app.schemas.event import EventOut, EventCreate, EventWithApplicants, ApplicantOut, FeedPage
-from app.services.notification_service import notify_captain_new_application
+from app.services import event_service
+from app.services.notification_service import notify_captain_new_application, notify_player_event_cancelled
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -28,11 +30,13 @@ async def get_feed(
     сам и на которые ещё не подавал заявку. Именно по этому списку
     фронтенд листает карточки "присоединиться / смотреть дальше".
     """
+    await event_service.complete_expired_events(session)
     application = aliased(EventApplication)
 
     stmt = (
         select(Event)
         .options(selectinload(Event.venue))
+        .join(Event.venue)
         .outerjoin(
             application,
             and_(
@@ -43,6 +47,7 @@ async def get_feed(
         .where(
             Event.status == EventStatus.open,
             Event.captain_id != user.id,
+            Venue.city == user.city,
             application.id.is_(None),
         )
         .order_by(Event.id.desc())
@@ -65,6 +70,7 @@ async def my_events(
     session: AsyncSession = Depends(get_session),
 ):
     """Слот «Мои публикации» — события, где текущий пользователь капитан."""
+    await event_service.complete_expired_events(session)
     result = await session.execute(
         select(Event)
         .options(selectinload(Event.venue))
@@ -80,6 +86,13 @@ async def create_event(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
+    if payload.slots_total < 1 or payload.slots_total > 100:
+        raise HTTPException(400, "Количество игроков должно быть от 1 до 100")
+
+    venue = await session.get(Venue, payload.venue_id)
+    if venue is None or venue.city != user.city:
+        raise HTTPException(400, "Поле недоступно")
+
     event = Event(
         captain_id=user.id,
         venue_id=payload.venue_id,
@@ -97,7 +110,12 @@ async def create_event(
 
 
 @router.get("/{event_id}", response_model=EventWithApplicants)
-async def get_event(event_id: int, session: AsyncSession = Depends(get_session)):
+async def get_event(
+    event_id: int,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    await event_service.complete_expired_events(session)
     event = await session.get(
         Event,
         event_id,
@@ -109,9 +127,22 @@ async def get_event(event_id: int, session: AsyncSession = Depends(get_session))
     if event is None:
         raise HTTPException(404, "Событие не найдено")
 
+    is_captain = event.captain_id == user.id
+    existing_application = await session.execute(
+        select(EventApplication).where(
+            EventApplication.event_id == event.id,
+            EventApplication.user_id == user.id,
+        )
+    )
+    has_application = existing_application.scalar_one_or_none() is not None
+    is_visible_open_event = event.status == EventStatus.open and event.venue.city == user.city
+
+    if not (is_captain or has_application or is_visible_open_event):
+        raise HTTPException(404, "Событие не найдено")
+
     return EventWithApplicants(
         **EventOut.model_validate(event).model_dump(),
-        applicants=[ApplicantOut.from_application(a) for a in event.applications],
+        applicants=[ApplicantOut.from_application(a) for a in event.applications] if is_captain else [],
     )
 
 
@@ -125,9 +156,16 @@ async def join_event(
     Игрок жмёт «Присоединиться». Заявка уходит капитану в статусе pending —
     окончательное решение принимает капитан через accept/decline.
     """
-    event = await session.get(Event, event_id)
+    await event_service.complete_expired_events(session)
+    event = await session.get(Event, event_id, options=[selectinload(Event.venue)])
     if event is None or event.status != EventStatus.open:
         raise HTTPException(400, "Событие недоступно для заявок")
+    if event.venue.city != user.city:
+        raise HTTPException(400, "Событие недоступно в вашем городе")
+    if event.slots_available <= 0:
+        event.status = EventStatus.full
+        await session.commit()
+        raise HTTPException(400, "Свободные места закончились")
     if event.captain_id == user.id:
         raise HTTPException(400, "Нельзя подать заявку на собственную публикацию")
 
@@ -161,6 +199,7 @@ async def delete_event(
     event = await session.get(Event, event_id)
     if event is None or event.captain_id != user.id:
         raise HTTPException(404, "Событие не найдено")
-    event.status = EventStatus.cancelled
-    await session.commit()
+    cancelled_applications = await event_service.cancel_event(session, event)
+    for application in cancelled_applications:
+        await notify_player_event_cancelled(session, application)
     return {"status": "cancelled"}

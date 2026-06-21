@@ -24,6 +24,7 @@ class Venue(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     sport_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    city: Mapped[str] = mapped_column(String(100), default="Тараз")
     latitude: Mapped[float] = mapped_column(Float)
     longitude: Mapped[float] = mapped_column(Float)
     is_paid: Mapped[bool] = mapped_column(Boolean, default=False)

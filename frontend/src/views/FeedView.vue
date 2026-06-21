@@ -2,12 +2,19 @@
   <div class="feed">
     <EventCard v-if="store.current" :event="store.current" @click="openDetail" />
     <p v-else-if="store.loading" class="empty">Загружаем публикации...</p>
-    <p v-else-if="store.error" class="empty">Не удалось загрузить ленту</p>
+    <div v-else-if="store.error" class="empty">
+      <p>Не удалось загрузить ленту</p>
+      <button @click="reload">Повторить</button>
+    </div>
     <p v-else class="empty">Новых публикаций пока нет</p>
 
+    <p v-if="store.actionError" class="error">{{ store.actionError }}</p>
+
     <div class="actions" v-if="store.current">
-      <button class="skip" @click="handleSkip">Смотреть дальше</button>
-      <button class="join" @click="handleJoin">Присоединиться</button>
+      <button class="skip" :disabled="store.actionLoading" @click="handleSkip">Смотреть дальше</button>
+      <button class="join" :disabled="store.actionLoading" @click="handleJoin">
+        {{ store.actionLoading ? "Отправляем..." : "Присоединиться" }}
+      </button>
     </div>
   </div>
 </template>
@@ -22,6 +29,10 @@ const store = useEventsStore();
 const router = useRouter();
 
 onMounted(() => store.loadFeed({ reset: true }));
+
+function reload() {
+  store.loadFeed({ reset: true });
+}
 
 function openDetail() {
   if (store.current) router.push({ name: "event-detail", params: { id: store.current.id } });
@@ -58,6 +69,14 @@ async function handleSkip() {
   border-radius: 12px;
   border: none;
   font-weight: 600;
+}
+.actions button:disabled {
+  opacity: 0.65;
+}
+.error {
+  color: #d64545;
+  font-size: 13px;
+  text-align: center;
 }
 .skip {
   background: #f0f0f0;

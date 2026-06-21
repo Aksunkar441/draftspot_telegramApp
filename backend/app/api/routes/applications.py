@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_current_user
 from app.database import get_session
 from app.models.application import EventApplication, ApplicationStatus
-from app.models.event import Event
+from app.models.event import Event, EventStatus
 from app.models.user import User
 from app.schemas.application import ApplicationOut
 from app.services import event_service
@@ -25,10 +27,13 @@ async def my_pending(
     session: AsyncSession = Depends(get_session),
 ):
     """Слот «К кому присоединился» — мои заявки, ожидающие ответа капитана."""
+    await event_service.complete_expired_events(session)
     result = await session.execute(
         select(EventApplication)
         .options(selectinload(EventApplication.event).selectinload(Event.venue))
+        .join(Event)
         .where(EventApplication.user_id == user.id, EventApplication.status == ApplicationStatus.pending)
+        .where(Event.status.in_([EventStatus.open, EventStatus.full]))
     )
     return result.scalars().all()
 
@@ -39,10 +44,13 @@ async def my_upcoming(
     session: AsyncSession = Depends(get_session),
 ):
     """Слот «Предстоящие игры» — заявки, принятые капитаном."""
+    await event_service.complete_expired_events(session)
     result = await session.execute(
         select(EventApplication)
         .options(selectinload(EventApplication.event).selectinload(Event.venue))
+        .join(Event)
         .where(EventApplication.user_id == user.id, EventApplication.status == ApplicationStatus.accepted)
+        .where(Event.status.in_([EventStatus.open, EventStatus.full]))
     )
     return result.scalars().all()
 
@@ -93,7 +101,7 @@ async def decline(
         raise HTTPException(400, "Заявка уже обработана")
 
     application.status = ApplicationStatus.declined
-    application.responded_at = None
+    application.responded_at = datetime.now(timezone.utc)
     await session.commit()
 
     await notify_player_decision(session, application, accepted=False)

@@ -15,6 +15,7 @@ async def seed():
             Venue(
                 name="Центральный стадион Тараз",
                 sport_type="Футбол",
+                city="Тараз",
                 latitude=42.8964,
                 longitude=71.3614,
                 is_paid=True,
@@ -25,6 +26,7 @@ async def seed():
             Venue(
                 name="Спорткомплекс Олимпик",
                 sport_type="Баскетбол",
+                city="Тараз",
                 latitude=42.9055,
                 longitude=71.3789,
                 is_paid=True,
@@ -35,6 +37,7 @@ async def seed():
             Venue(
                 name="Дворовая площадка (8-й микрорайон)",
                 sport_type="Футбол",
+                city="Тараз",
                 latitude=42.8876,
                 longitude=71.3456,
                 is_paid=False,
@@ -45,6 +48,7 @@ async def seed():
             Venue(
                 name="Теннисный корт Тараз",
                 sport_type="Теннис",
+                city="Тараз",
                 latitude=42.9123,
                 longitude=71.3912,
                 is_paid=True,
@@ -55,6 +59,7 @@ async def seed():
             Venue(
                 name="Стритбольная площадка (Парк Первого Президента)",
                 sport_type="Баскетбол",
+                city="Тараз",
                 latitude=42.8932,
                 longitude=71.3702,
                 is_paid=False,

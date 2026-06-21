@@ -1,10 +1,12 @@
+from datetime import datetime, timezone
+
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
 from app.database import async_session
 from app.models.application import EventApplication, ApplicationStatus
 from app.services import event_service
-from app.services.notification_service import notify_player_decision
+from app.services.notification_service import notify_player_decision, notify_player_event_full
 
 router = Router()
 
@@ -22,11 +24,13 @@ async def accept_from_chat(callback: CallbackQuery):
         if application is None or application.status != ApplicationStatus.pending:
             await callback.answer("Заявка уже обработана", show_alert=True)
             return
-        success = await event_service.accept_application(session, application)
+        success, auto_declined = await event_service.accept_application(session, application)
         if not success:
             await callback.answer("Свободные места закончились", show_alert=True)
             return
         await notify_player_decision(session, application, accepted=True)
+        for declined_application in auto_declined:
+            await notify_player_event_full(session, declined_application)
     await callback.message.edit_text("Заявка принята ✅")
     await callback.answer()
 
@@ -40,6 +44,7 @@ async def decline_from_chat(callback: CallbackQuery):
             await callback.answer("Заявка уже обработана", show_alert=True)
             return
         application.status = ApplicationStatus.declined
+        application.responded_at = datetime.now(timezone.utc)
         await session.commit()
         await notify_player_decision(session, application, accepted=False)
     await callback.message.edit_text("Заявка отклонена ❌")
