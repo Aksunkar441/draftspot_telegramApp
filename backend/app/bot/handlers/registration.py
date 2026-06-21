@@ -22,7 +22,19 @@ async def process_age(message: Message, state: FSMContext):
     if not message.text.isdigit():
         await message.answer("Введите возраст числом, пожалуйста.")
         return
-    await state.update_data(age=int(message.text), photos=[])
+    await state.update_data(age=int(message.text))
+    await state.set_state(Registration.waiting_city)
+    await message.answer("В каком городе вы хотите искать игры?")
+
+
+@router.message(Registration.waiting_city)
+async def process_city(message: Message, state: FSMContext):
+    city = (message.text or "").strip()
+    if not city:
+        await message.answer("Введите название города, пожалуйста.")
+        return
+
+    await state.update_data(city=city, photos=[])
     await state.set_state(Registration.waiting_photos)
     await message.answer(
         "Отправьте одно или несколько фото. Когда закончите — нажмите «Готово».",
@@ -61,6 +73,7 @@ async def _finalize_registration(message: Message, state: FSMContext, bio: str |
             telegram_id=message.chat.id,
             name=data["name"],
             age=data["age"],
+            city=data["city"],
             photos=data["photos"],
             bio=bio,
         )

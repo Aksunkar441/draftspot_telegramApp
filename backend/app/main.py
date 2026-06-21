@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import asynccontextmanager
 
 from aiogram.types import Update
@@ -8,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.bot.bot_instance import bot, dp
 from app.bot.handlers import routers
-from app.services.reminder_service import reminder_loop
 from app.api.routes import users, venues, events, applications
 
 for r in routers:
@@ -19,9 +17,7 @@ for r in routers:
 async def lifespan(app: FastAPI):
     webhook_url = settings.webhook_base_url.rstrip("/") + settings.webhook_path
     await bot.set_webhook(webhook_url)
-    reminder_task = asyncio.create_task(reminder_loop())
     yield
-    reminder_task.cancel()
     await bot.session.close()
 
 
