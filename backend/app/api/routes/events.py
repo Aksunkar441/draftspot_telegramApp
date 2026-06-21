@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm import selectinload
@@ -140,7 +141,11 @@ async def join_event(
 
     application = EventApplication(event_id=event_id, user_id=user.id, status=ApplicationStatus.pending)
     session.add(application)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(400, "Заявка уже отправлена") from None
     await session.refresh(application)
 
     await notify_captain_new_application(session, event, user, application.id)
