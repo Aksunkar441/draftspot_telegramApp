@@ -1,6 +1,14 @@
 import client from "./client";
 
-export const getFeed = () => client.get("/events/feed").then((r) => r.data);
+export const getFeed = ({ cursor = null, limit = 10 } = {}) =>
+  client
+    .get("/events/feed", {
+      params: {
+        limit,
+        ...(cursor ? { cursor } : {}),
+      },
+    })
+    .then((r) => r.data);
 export const getMyEvents = () => client.get("/events/my").then((r) => r.data);
 export const getEvent = (id) => client.get(`/events/${id}`).then((r) => r.data);
 export const createEvent = (payload) => client.post("/events", payload).then((r) => r.data);

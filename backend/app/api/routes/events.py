@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
@@ -8,14 +9,16 @@ from app.database import get_session
 from app.models.event import Event, EventStatus
 from app.models.application import EventApplication, ApplicationStatus
 from app.models.user import User
-from app.schemas.event import EventOut, EventCreate, EventWithApplicants, ApplicantOut
+from app.schemas.event import EventOut, EventCreate, EventWithApplicants, ApplicantOut, FeedPage
 from app.services.notification_service import notify_captain_new_application
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
 
-@router.get("/feed", response_model=list[EventOut])
+@router.get("/feed", response_model=FeedPage)
 async def get_feed(
+    limit: int = Query(default=10, ge=1, le=20),
+    cursor: int | None = Query(default=None, ge=1),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
@@ -24,19 +27,35 @@ async def get_feed(
     сам и на которые ещё не подавал заявку. Именно по этому списку
     фронтенд листает карточки "присоединиться / смотреть дальше".
     """
-    already_applied = select(EventApplication.event_id).where(EventApplication.user_id == user.id)
+    application = aliased(EventApplication)
 
-    result = await session.execute(
+    stmt = (
         select(Event)
         .options(selectinload(Event.venue))
+        .outerjoin(
+            application,
+            and_(
+                application.event_id == Event.id,
+                application.user_id == user.id,
+            ),
+        )
         .where(
             Event.status == EventStatus.open,
             Event.captain_id != user.id,
-            Event.id.not_in(already_applied),
+            application.id.is_(None),
         )
-        .order_by(Event.created_at.desc())
+        .order_by(Event.id.desc())
+        .limit(limit + 1)
     )
-    return result.scalars().all()
+    if cursor is not None:
+        stmt = stmt.where(Event.id < cursor)
+
+    result = await session.execute(stmt)
+    events = list(result.scalars().all())
+    has_more = len(events) > limit
+    items = events[:limit]
+    next_cursor = items[-1].id if has_more and items else None
+    return FeedPage(items=items, next_cursor=next_cursor)
 
 
 @router.get("/my", response_model=list[EventOut])

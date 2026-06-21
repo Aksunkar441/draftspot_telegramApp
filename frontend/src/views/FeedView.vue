@@ -1,10 +1,12 @@
 <template>
   <div class="feed">
     <EventCard v-if="store.current" :event="store.current" @click="openDetail" />
+    <p v-else-if="store.loading" class="empty">Загружаем публикации...</p>
+    <p v-else-if="store.error" class="empty">Не удалось загрузить ленту</p>
     <p v-else class="empty">Новых публикаций пока нет</p>
 
     <div class="actions" v-if="store.current">
-      <button class="skip" @click="store.skip">Смотреть дальше</button>
+      <button class="skip" @click="handleSkip">Смотреть дальше</button>
       <button class="join" @click="handleJoin">Присоединиться</button>
     </div>
   </div>
@@ -19,7 +21,7 @@ import { useEventsStore } from "../stores/events";
 const store = useEventsStore();
 const router = useRouter();
 
-onMounted(() => store.loadFeed());
+onMounted(() => store.loadFeed({ reset: true }));
 
 function openDetail() {
   if (store.current) router.push({ name: "event-detail", params: { id: store.current.id } });
@@ -27,6 +29,10 @@ function openDetail() {
 
 async function handleJoin() {
   await store.join();
+}
+
+async function handleSkip() {
+  await store.skip();
 }
 </script>
 

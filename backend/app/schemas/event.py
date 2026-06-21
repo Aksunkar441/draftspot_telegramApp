@@ -31,6 +31,11 @@ class EventOut(BaseModel):
     status: EventStatus
 
 
+class FeedPage(BaseModel):
+    items: list[EventOut]
+    next_cursor: int | None = None
+
+
 class ApplicantOut(BaseModel):
     """Сжатое представление заявки, встраиваемое в детальный просмотр события.
     Не переиспользует ApplicationOut, чтобы не создавать циклический импорт

@@ -58,3 +58,5 @@ create index idx_events_status on events(status);
 create index idx_events_captain on events(captain_id);
 create index idx_applications_event on event_applications(event_id);
 create index idx_applications_user on event_applications(user_id);
+create index idx_events_feed on events(status, id desc);
+create index idx_applications_user_event on event_applications(user_id, event_id);
