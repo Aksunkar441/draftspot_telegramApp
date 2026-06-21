@@ -28,6 +28,16 @@ async def notify_player_decision(session: AsyncSession, application: EventApplic
     await bot.send_message(player.telegram_id, text)
 
 
+async def notify_player_event_full(session: AsyncSession, application: EventApplication) -> None:
+    player = await session.get(User, application.user_id)
+    event = await session.get(Event, application.event_id)
+    await bot.send_message(
+        player.telegram_id,
+        f"В игре «{event.sport_type or 'без названия'}» закончились свободные места. "
+        "Ваша заявка отклонена автоматически.",
+    )
+
+
 async def notify_team_about_cancellation(session: AsyncSession, application: EventApplication) -> None:
     event = await session.get(Event, application.event_id)
     captain = await session.get(User, event.captain_id)

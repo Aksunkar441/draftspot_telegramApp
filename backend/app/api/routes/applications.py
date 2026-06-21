@@ -10,7 +10,11 @@ from app.models.event import Event
 from app.models.user import User
 from app.schemas.application import ApplicationOut
 from app.services import event_service
-from app.services.notification_service import notify_player_decision, notify_team_about_cancellation
+from app.services.notification_service import (
+    notify_player_decision,
+    notify_player_event_full,
+    notify_team_about_cancellation,
+)
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
@@ -68,11 +72,13 @@ async def accept(
     if application.status != ApplicationStatus.pending:
         raise HTTPException(400, "Заявка уже обработана")
 
-    success = await event_service.accept_application(session, application)
+    success, auto_declined = await event_service.accept_application(session, application)
     if not success:
         raise HTTPException(400, "Свободные места закончились")
 
     await notify_player_decision(session, application, accepted=True)
+    for declined_application in auto_declined:
+        await notify_player_event_full(session, declined_application)
     return {"status": "accepted"}
 
 

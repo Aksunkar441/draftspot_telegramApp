@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.models.event import EventStatus
 from app.models.application import ApplicationStatus
@@ -14,6 +14,17 @@ class EventCreate(BaseModel):
     scheduled_at: datetime | None = None
     price: float | None = None
     slots_total: int
+
+    @field_validator("scheduled_at")
+    @classmethod
+    def scheduled_at_must_be_in_future(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return value
+
+        scheduled_at = value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+        if scheduled_at <= datetime.now(timezone.utc):
+            raise ValueError("Время проведения должно быть в будущем")
+        return value
 
 
 class EventOut(BaseModel):
