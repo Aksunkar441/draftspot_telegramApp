@@ -55,6 +55,14 @@ create table event_applications (
     unique (event_id, user_id)
 );
 
+create table event_favorites (
+    id bigserial primary key,
+    event_id bigint references events(id) on delete cascade,
+    user_id bigint references users(id) on delete cascade,
+    created_at timestamptz default now(),
+    unique (event_id, user_id)
+);
+
 create index idx_events_status on events(status);
 create index idx_events_captain on events(captain_id);
 create index idx_applications_event on event_applications(event_id);
@@ -63,3 +71,5 @@ create index idx_events_feed on events(status, id desc);
 create index idx_events_status_scheduled_at on events(status, scheduled_at);
 create index idx_applications_user_event on event_applications(user_id, event_id);
 create index idx_venues_city on venues(city);
+create index idx_favorites_user_created on event_favorites(user_id, created_at desc);
+create index idx_favorites_event on event_favorites(event_id);

@@ -1,42 +1,49 @@
 <template>
-  <form class="create-form" @submit.prevent="submit">
-    <label>
-      Поле
-      <select v-model.number="form.venue_id" :disabled="loadingVenues || !venues.length" required>
-        <option v-for="venue in venues" :key="venue.id" :value="venue.id">
-          {{ venue.name }} ({{ venue.is_paid ? venue.price + " ₸" : "бесплатно" }})
-        </option>
-      </select>
-    </label>
-    <p v-if="loadingVenues" class="hint">Загружаем поля...</p>
-    <p v-else-if="venueError" class="error">{{ venueError }}</p>
+  <section class="create-page">
+    <header>
+      <p>Новая игра</p>
+      <h1>Опубликовать сбор</h1>
+    </header>
 
-    <label>
-      Вид спорта (необязательно)
-      <input v-model="form.sport_type" type="text" />
-    </label>
+    <form class="create-form" @submit.prevent="submit">
+      <label>
+        Поле
+        <select v-model.number="form.venue_id" :disabled="loadingVenues || !venues.length" required>
+          <option v-for="venue in venues" :key="venue.id" :value="venue.id">
+            {{ venue.name }} ({{ venue.is_paid ? venue.price + " ₸" : "бесплатно" }})
+          </option>
+        </select>
+      </label>
+      <p v-if="loadingVenues" class="hint">Загружаем поля...</p>
+      <p v-else-if="venueError" class="error">{{ venueError }}</p>
 
-    <label>
-      Сколько игроков нужно
-      <input v-model.number="form.slots_total" type="number" min="1" required />
-    </label>
+      <label>
+        Вид спорта (необязательно)
+        <input v-model="form.sport_type" type="text" placeholder="Футбол, баскетбол, теннис" />
+      </label>
 
-    <label>
-      Время проведения (необязательно)
-      <input v-model="form.scheduled_at" type="datetime-local" />
-    </label>
+      <label>
+        Сколько игроков нужно
+        <input v-model.number="form.slots_total" type="number" min="1" required />
+      </label>
 
-    <label>
-      Ссылка на группу (необязательно)
-      <input v-model="form.group_link" type="url" />
-    </label>
+      <label>
+        Время проведения (необязательно)
+        <input v-model="form.scheduled_at" type="datetime-local" />
+      </label>
 
-    <p v-if="submitError" class="error">{{ submitError }}</p>
+      <label>
+        Ссылка на группу (необязательно)
+        <input v-model="form.group_link" type="url" placeholder="https://t.me/..." />
+      </label>
 
-    <button type="submit" :disabled="submitting || loadingVenues || !form.venue_id">
-      {{ submitting ? "Публикуем..." : "Опубликовать" }}
-    </button>
-  </form>
+      <p v-if="submitError" class="error">{{ submitError }}</p>
+
+      <button type="submit" :disabled="submitting || loadingVenues || !form.venue_id">
+        {{ submitting ? "Публикуем..." : "Опубликовать" }}
+      </button>
+    </form>
+  </section>
 </template>
 
 <script setup>
@@ -95,32 +102,75 @@ async function submit() {
 </script>
 
 <style scoped>
+.create-page {
+  min-height: 100svh;
+  padding: 24px min(5vw, 28px);
+  background:
+    linear-gradient(90deg, rgba(17, 17, 17, 0.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(17, 17, 17, 0.035) 1px, transparent 1px),
+    var(--surface-muted);
+  background-size: 48px 48px;
+}
+.create-page header {
+  max-width: 560px;
+  margin: 0 auto 18px;
+}
+.create-page header p {
+  margin: 0 0 6px;
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.create-page header h1 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: clamp(30px, 8vw, 44px);
+  line-height: 0.98;
+}
 .create-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: var(--shadow-floating);
 }
 label {
   display: flex;
   flex-direction: column;
   gap: 6px;
   font-size: 14px;
-  color: #555;
+  font-weight: 800;
+  color: var(--text-muted);
 }
 input,
 select {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+  min-height: 48px;
+  padding: 0 13px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--surface-muted);
+  color: var(--text-main);
+  outline: none;
+}
+input:focus,
+select:focus {
+  border-color: var(--black);
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
 }
 button[type="submit"] {
-  padding: 14px;
-  border-radius: 12px;
+  min-height: 52px;
   border: none;
-  font-weight: 600;
-  background: var(--tg-theme-button-color, #2ea6ff);
-  color: var(--tg-theme-button-text-color, #fff);
+  border-radius: 999px;
+  background: var(--black);
+  color: #fff;
+  font-weight: 950;
 }
 button:disabled,
 select:disabled {
@@ -132,9 +182,19 @@ select:disabled {
   font-size: 13px;
 }
 .hint {
-  color: #777;
+  color: var(--text-muted);
 }
 .error {
-  color: #d64545;
+  color: var(--text-main);
+}
+
+@media (max-width: 430px) {
+  .create-page {
+    padding: 18px 10px;
+  }
+  .create-form {
+    padding: 14px;
+    border-radius: 20px;
+  }
 }
 </style>

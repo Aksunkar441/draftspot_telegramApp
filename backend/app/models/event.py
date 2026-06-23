@@ -40,3 +40,6 @@ class Event(Base):
     applications: Mapped[list["EventApplication"]] = relationship(
         back_populates="event", cascade="all, delete-orphan"
     )
+    favorites: Mapped[list["EventFavorite"]] = relationship(
+        back_populates="event", cascade="all, delete-orphan"
+    )

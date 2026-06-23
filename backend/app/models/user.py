@@ -20,3 +20,4 @@ class User(Base):
 
     events: Mapped[list["Event"]] = relationship(back_populates="captain")
     applications: Mapped[list["EventApplication"]] = relationship(back_populates="user")
+    favorites: Mapped[list["EventFavorite"]] = relationship(back_populates="user")

@@ -15,13 +15,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { getUpcoming, cancelApplication } from "../../api/applications";
 
 const applications = ref([]);
 const loading = ref(false);
 const actionLoading = ref(false);
 const error = ref("");
+const emit = defineEmits(["count"]);
+
+watch(applications, (items) => emit("count", items.length), { immediate: true });
 
 async function load() {
   loading.value = true;
@@ -59,14 +62,40 @@ onMounted(load);
   padding: 0 16px;
 }
 .item {
-  border-radius: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 20px;
   padding: 14px;
   background: #fff;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-soft);
+}
+.item p {
+  margin: 0 0 6px;
+}
+.item p:first-child {
+  font-weight: 800;
+}
+.item button {
+  margin-top: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-main);
+  font-weight: 800;
 }
 .empty {
   text-align: center;
-  color: #888;
+  color: var(--text-muted);
+  padding: 32px 16px;
+}
+.empty button {
+  margin-top: 8px;
+  padding: 9px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-main);
+  font-weight: 800;
 }
 button:disabled {
   opacity: 0.65;
