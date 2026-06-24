@@ -1,31 +1,130 @@
-# 🏆 Путеводитель по Sport Meetup: Объяснение для будущих создателей!
+# Draftspot Development Workflow
 
-Привет! Если ты хочешь понять, как устроен этот проект, настроить его или даже написать такой же с нуля — ты попал по адресу. Мы объясним всё простыми словами, без сложных терминов. 
+This guide describes how to develop Draftspot without touching production by accident.
 
-Представь, что этот проект — это **организация футбольного матча во дворе**. Для этого нам нужны три главные вещи:
+## Environments
 
-1. 📖 **База данных (Database)** — это наш **Большой Блокнот**. В него мы записываем: кто наши игроки, какие у нас есть спортивные поля, кто создал игру и кто хочет к ней присоединиться.
-2. 🤖 **Бэкенд (Backend) + Бот** — это наш **Умный Судья и Почтовый Голубь**. Судья следит, чтобы никто не сжульничал (например, чтобы на поле на 10 мест не записалось 11 человек). А Голубь летает к игрокам в Telegram и рассказывает новости (например: *"Эй! Капитан принял твою заявку на матч!"*).
-3. 📱 **Фронтенд (Frontend / Mini App)** — это **Красивая Информационная Доска**. Игроки не смотрят в блокнот напрямую (это скучно и неудобно). Они смотрят на красивый экран телефона, где нарисованы карточки матчей с ценами, адресами и кнопкой «Присоединиться».
+| Environment | Git branch | Frontend | Backend | Database | Telegram bot |
+| --- | --- | --- | --- | --- | --- |
+| Local | feature branches | `http://127.0.0.1:5173` | `http://127.0.0.1:8000` | Supabase dev | Dev bot via ngrok |
+| Staging | `develop` | Vercel Preview | Render `draftspot-backend-dev` | Supabase dev | Dev bot |
+| Production | `main` | Vercel Production | Render production backend | Supabase production | Main bot |
 
----
+Production data must not be used for UI experiments, seed data, or manual SQL tests.
 
-## 🗺 Карта нашего обучения (Содержание папки `guide/`)
+## Git Flow
 
-Мы разделили объяснение на 4 простые части. Прочитай их по порядку:
+Use `main` only for production-ready code.
 
-* 🍎 [**Шаг 1. Как это работает (на простых аналогиях)**](file:///Users/aksunkar--/Downloads/sport-meetup-project/guide/01_how_it_works.md)
-  *Подробное объяснение ролей Бэкенда, Фронтенда, Базы Данных и Бота на примере детской площадки.*
-  
-* 📂 [**Шаг 2. Разбор файлов проекта «по полочкам»**](file:///Users/aksunkar--/Downloads/sport-meetup-project/guide/02_files_explained.md)
-  *Что лежит в каждой папке и зачем нужен каждый файлик в коде.*
-  
-* 🛠 [**Шаг 3. Как запустить и протестировать всё самому**](file:///Users/aksunkar--/Downloads/sport-meetup-project/guide/03_setup_and_play.md)
-  *Простая инструкция по запуску с картинками и понятными шагами.*
-  
-* 🏗 [**Шаг 4. Как написать такой проект с нуля**](file:///Users/aksunkar--/Downloads/sport-meetup-project/guide/04_build_it_yourself.md)
-  *План действий для тех, кто хочет стать программистом и создать свой собственный Mini App.*
+```bash
+git switch develop
+git pull origin develop
+git switch -c feature/short-task-name
+```
 
----
+After testing locally, merge the feature into `develop`. Vercel creates a Preview deployment and Render dev deploys the backend from `develop`. Test in the dev Telegram bot before merging to `main`.
 
-*Этот путеводитель лежит в папке `guide/` твоего проекта. Ты можешь читать его прямо отсюда или открыть файлы в любом текстовом редакторе!*
+## Local Backend
+
+Create `backend/.env` from `backend/.env.example` and point `DATABASE_URL` to the Supabase dev project.
+
+Run the backend without changing Telegram webhook:
+
+```bash
+cd backend
+SERVERLESS=true ../.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+If you need Telegram webhook locally, run ngrok and set `WEBHOOK_BASE_URL` to the ngrok HTTPS URL:
+
+```bash
+ngrok http 8000
+```
+
+Then set the dev bot webhook to:
+
+```text
+https://api.telegram.org/botDEV_BOT_TOKEN/setWebhook?url=https://NGROK_URL/bot/webhook
+```
+
+## Local Frontend
+
+Create `frontend/.env.local`:
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
+```
+
+Run:
+
+```bash
+cd frontend
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+Open:
+
+```text
+http://127.0.0.1:5173
+```
+
+For real Telegram authentication, test through the dev bot. Browser-only local testing can verify layout, but protected API calls require signed Telegram `initData`.
+
+## Supabase Dev Database
+
+Run SQL in this order in the dev Supabase project:
+
+1. `backend/sql/schema.sql`
+2. `backend/sql/dev_seed.sql`
+
+The seed is idempotent. It clears only rows created by the seed marker and recreates demo venues, users, events, applications, and favorites.
+
+## Render Dev Backend
+
+Render dev service:
+
+```text
+Name: draftspot-backend-dev
+Branch: develop
+Root Directory: backend
+Build Command: pip install -r requirements.txt
+Start Command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Required environment variables:
+
+```env
+BOT_TOKEN=dev-bot-token
+DATABASE_URL=postgresql+asyncpg://...
+WEBHOOK_BASE_URL=https://draftspot-backend-dev.onrender.com
+MINI_APP_URL=https://vercel-preview-url
+WEBHOOK_PATH=/bot/webhook
+PYTHON_VERSION=3.10.14
+```
+
+`DATABASE_URL` must start with `postgresql+asyncpg://`. If a password contains special characters, URL-encode them.
+
+## Vercel Environments
+
+Use one Vercel project with different environment values:
+
+```text
+Production VITE_API_BASE_URL = https://production-backend.onrender.com/api
+Preview    VITE_API_BASE_URL = https://draftspot-backend-dev.onrender.com/api
+```
+
+Preview deployments must be publicly accessible for Telegram Mini App testing. If Telegram opens a Vercel login screen, disable Deployment Protection for Preview or use a public staging deployment.
+
+## Promotion Checklist
+
+Before merging `develop` into `main`:
+
+- Frontend build passes.
+- Backend starts on Render dev.
+- Dev bot `/start` works.
+- Mini App opens Vercel Preview without login.
+- Create event works against Supabase dev.
+- Feed, favorites, applications, and profile behave correctly.
+- Any required SQL migration has been run on dev first.
+
+Only after this checklist is clean should the change move to production.
