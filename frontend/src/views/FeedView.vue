@@ -69,7 +69,7 @@
           </div>
         </div>
 
-        <VenueMapPreview v-else :venue="store.current.venue" />
+        <VenueMapPreview v-else class="card-map" :venue="store.current.venue" />
 
         <div class="swipe-hints" aria-hidden="true">
           <span :class="{ visible: swipeIntent === 'skip' }">Пропустить</span>
@@ -368,6 +368,10 @@ async function handleFavorite() {
   gap: 18px;
   flex: 1;
   min-height: 0;
+  margin-top: 18px;
+}
+.card-map {
+  margin-top: 18px;
 }
 .venue-image {
   position: relative;

@@ -10,7 +10,9 @@ const client = axios.create({
 // FastAPI проверяет её на сервере (см. app/core/security.py),
 // чтобы исключить подмену telegram_id на клиенте.
 client.interceptors.request.use((config) => {
-  const initData = window.Telegram?.WebApp?.initData ?? "";
+  const initData =
+    window.Telegram?.WebApp?.initData ??
+    (import.meta.env.DEV ? import.meta.env.VITE_TELEGRAM_INIT_DATA ?? "" : "");
   config.headers["X-Telegram-Init-Data"] = initData;
   if (apiBaseURL.includes("ngrok-free.")) {
     config.headers["ngrok-skip-browser-warning"] = "true";

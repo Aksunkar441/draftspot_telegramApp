@@ -94,10 +94,29 @@ async function submit() {
     const event = await createEvent(payload);
     router.push({ name: "event-detail", params: { id: event.id } });
   } catch (error) {
-    submitError.value = error.response?.data?.detail ?? "Не удалось опубликовать событие";
+    submitError.value = humanizeSubmitError(error);
   } finally {
     submitting.value = false;
   }
+}
+
+function humanizeSubmitError(error) {
+  const detail = error.response?.data?.detail;
+  const details = Array.isArray(detail) ? detail : [];
+  const groupLinkError = details.find((item) => item.loc?.includes("group_link"));
+  if (groupLinkError) {
+    return "Ссылка не подходит. Укажи Telegram-ссылку: https://t.me/... или https://telegram.me/...";
+  }
+
+  if (details.length) {
+    return details[0].msg?.replace(/^Value error,\s*/i, "") || "Проверь данные формы";
+  }
+
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  return "Не удалось опубликовать событие";
 }
 </script>
 
@@ -186,6 +205,8 @@ select:disabled {
 }
 .error {
   color: var(--text-main);
+  overflow-wrap: anywhere;
+  line-height: 1.35;
 }
 
 @media (max-width: 430px) {

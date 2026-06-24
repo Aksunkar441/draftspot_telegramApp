@@ -25,6 +25,19 @@
       Открыть группу
     </a>
 
+    <div v-if="!isCaptain" class="player-actions">
+      <button
+        v-if="canJoin"
+        class="join-action"
+        :disabled="actionLoading"
+        @click="join"
+      >
+        {{ actionLoading ? "Отправляем..." : "Записаться на игру" }}
+      </button>
+      <p v-else class="unavailable-note">{{ unavailableReason }}</p>
+      <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
+    </div>
+
     <VenueMapPreview :venue="event.venue" />
 
     <div v-if="isCaptain" class="applicants">
@@ -49,7 +62,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { getEvent } from "../api/events";
+import { getEvent, joinEvent } from "../api/events";
 import { acceptApplication, declineApplication, kickPlayer } from "../api/applications";
 import { useUserStore } from "../stores/user";
 import VenueMapPreview from "../components/VenueMapPreview.vue";
@@ -58,12 +71,25 @@ const props = defineProps({ id: { type: [String, Number], required: true } });
 const event = ref(null);
 const loading = ref(false);
 const actionLoading = ref(false);
+const actionMessage = ref("");
 const error = ref("");
 const userStore = useUserStore();
 
 const isCaptain = computed(
   () => event.value && userStore.profile && event.value.captain_id === userStore.profile.id
 );
+
+const canJoin = computed(
+  () => event.value?.status === "open" && Number(event.value?.slots_available) > 0
+);
+
+const unavailableReason = computed(() => {
+  if (!event.value) return "";
+  if (event.value.status === "completed") return "Игра уже закончилась";
+  if (event.value.status === "cancelled") return "Игра отменена";
+  if (event.value.status === "full" || Number(event.value.slots_available) <= 0) return "Мест больше нет";
+  return "Сейчас нельзя подать заявку";
+});
 
 function statusLabel(status) {
   return { pending: "ожидает ответа", accepted: "принят", declined: "отклонён", cancelled: "отменён" }[status] ?? status;
@@ -90,6 +116,21 @@ async function decline(appId) {
 }
 async function kick(appId) {
   await runAction(() => kickPlayer(appId));
+}
+
+async function join() {
+  actionLoading.value = true;
+  actionMessage.value = "";
+  error.value = "";
+  try {
+    await joinEvent(event.value.id);
+    actionMessage.value = "Заявка отправлена капитану";
+    await load();
+  } catch (e) {
+    actionMessage.value = e.response?.data?.detail ?? "Не удалось отправить заявку";
+  } finally {
+    actionLoading.value = false;
+  }
 }
 
 async function runAction(action) {
@@ -182,6 +223,34 @@ onMounted(load);
   font-weight: 950;
   text-align: center;
   text-decoration: none;
+}
+.player-actions {
+  max-width: 760px;
+  margin: 0 auto 16px;
+}
+.join-action {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 999px;
+  border-color: var(--black);
+  background: var(--black);
+  color: #fff;
+  font-weight: 950;
+}
+.unavailable-note,
+.action-message {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background: #fff;
+  color: var(--text-muted);
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+}
+.action-message {
+  margin-top: 8px;
+  color: var(--text-main);
 }
 .detail :deep(.map-card) {
   max-width: 760px;
