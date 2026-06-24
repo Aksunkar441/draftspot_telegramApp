@@ -100,6 +100,7 @@ WEBHOOK_BASE_URL=https://draftspot-backend-dev.onrender.com
 MINI_APP_URL=https://vercel-preview-url
 WEBHOOK_PATH=/bot/webhook
 PYTHON_VERSION=3.10.14
+CORS_ORIGIN_REGEX=https://.*-aksunkar441s-projects\.vercel\.app
 ```
 
 `DATABASE_URL` must start with `postgresql+asyncpg://`. If a password contains special characters, URL-encode them.
@@ -114,6 +115,12 @@ Preview    VITE_API_BASE_URL = https://draftspot-backend-dev.onrender.com/api
 ```
 
 Preview deployments must be publicly accessible for Telegram Mini App testing. If Telegram opens a Vercel login screen, disable Deployment Protection for Preview or use a public staging deployment.
+
+Vercel Preview URLs change between deployments. In Render dev, set `CORS_ORIGIN_REGEX` to the preview-domain pattern so the backend accepts fresh Preview deployments without editing `MINI_APP_URL` every time:
+
+```env
+CORS_ORIGIN_REGEX=https://.*-aksunkar441s-projects\.vercel\.app
+```
 
 ## Promotion Checklist
 

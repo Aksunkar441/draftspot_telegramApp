@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     default_city: str = "Тараз"
     init_data_max_age_seconds: int = 24 * 60 * 60
     serverless: bool = False
+    cors_origin_regex: str | None = None
 
     @property
     def effective_mini_app_url(self) -> str:
