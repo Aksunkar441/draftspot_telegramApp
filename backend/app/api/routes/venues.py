@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.city import normalize_city
 from app.database import get_session
 from app.models.user import User
 from app.models.venue import Venue
@@ -20,7 +21,8 @@ async def list_venues(
     Список площадок готовится платформой заранее (геоданные, тип игры,
     платность, статус занятости для платных кортов).
     """
+    city = normalize_city(user.city)
     result = await session.execute(
-        select(Venue).where(Venue.city == user.city).order_by(Venue.name.asc())
+        select(Venue).where(Venue.city == city).order_by(Venue.name.asc())
     )
     return result.scalars().all()

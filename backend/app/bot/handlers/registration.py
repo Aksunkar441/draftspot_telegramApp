@@ -3,6 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from app.database import async_session
+from app.core.city import normalize_city
 from app.models.user import User
 from app.bot.states import Registration
 from app.bot.keyboards import done_uploading_photos_keyboard, skip_description_keyboard, open_app_keyboard
@@ -34,7 +35,7 @@ async def process_city(message: Message, state: FSMContext):
         await message.answer("Введите название города, пожалуйста.")
         return
 
-    await state.update_data(city=city, photos=[])
+    await state.update_data(city=normalize_city(city), photos=[])
     await state.set_state(Registration.waiting_photos)
     await message.answer(
         "Отправьте одно или несколько фото. Когда закончите — нажмите «Готово».",

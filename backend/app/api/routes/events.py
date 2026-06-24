@@ -6,6 +6,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
+from app.core.city import normalize_city
 from app.database import get_session
 from app.models.event import Event, EventStatus
 from app.models.application import EventApplication, ApplicationStatus
@@ -32,6 +33,7 @@ async def get_feed(
     """
     await event_service.complete_expired_events(session)
     application = aliased(EventApplication)
+    city = normalize_city(user.city)
 
     stmt = (
         select(Event)
@@ -47,7 +49,7 @@ async def get_feed(
         .where(
             Event.status == EventStatus.open,
             Event.captain_id != user.id,
-            Venue.city == user.city,
+            Venue.city == city,
             application.id.is_(None),
         )
         .order_by(Event.id.desc())
@@ -89,8 +91,9 @@ async def create_event(
     if payload.slots_total < 1 or payload.slots_total > 100:
         raise HTTPException(400, "Количество игроков должно быть от 1 до 100")
 
+    city = normalize_city(user.city)
     venue = await session.get(Venue, payload.venue_id)
-    if venue is None or venue.city != user.city:
+    if venue is None or venue.city != city:
         raise HTTPException(400, "Поле недоступно")
 
     event = Event(
@@ -135,7 +138,8 @@ async def get_event(
         )
     )
     has_application = existing_application.scalar_one_or_none() is not None
-    is_visible_open_event = event.status == EventStatus.open and event.venue.city == user.city
+    city = normalize_city(user.city)
+    is_visible_open_event = event.status == EventStatus.open and event.venue.city == city
 
     if not (is_captain or has_application or is_visible_open_event):
         raise HTTPException(404, "Событие не найдено")
@@ -158,9 +162,10 @@ async def join_event(
     """
     await event_service.complete_expired_events(session)
     event = await session.get(Event, event_id, options=[selectinload(Event.venue)])
+    city = normalize_city(user.city)
     if event is None or event.status != EventStatus.open:
         raise HTTPException(400, "Событие недоступно для заявок")
-    if event.venue.city != user.city:
+    if event.venue.city != city:
         raise HTTPException(400, "Событие недоступно в вашем городе")
     if event.slots_available <= 0:
         event.status = EventStatus.full

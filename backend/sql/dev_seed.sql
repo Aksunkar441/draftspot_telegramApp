@@ -3,6 +3,11 @@
 
 begin;
 
+update users
+set city = 'Тараз'
+where city is not null
+  and lower(trim(city)) in ('тараз', 'taraz');
+
 delete from event_favorites
 where event_id in (select id from events where group_link = 'https://t.me/draftspot_dev_seed')
    or user_id in (select id from users where telegram_id in (900000001, 900000002, 900000003));
