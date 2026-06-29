@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.bot.bot_instance import bot, dp
 from app.bot.handlers import routers
-from app.api.routes import users, venues, events, applications, favorites
+from app.api.routes import users, venues, events, applications, favorites, checkins
 
 for r in routers:
     dp.include_router(r)
@@ -40,6 +40,7 @@ app.include_router(venues.router)
 app.include_router(events.router)
 app.include_router(applications.router)
 app.include_router(favorites.router)
+app.include_router(checkins.router)
 
 
 @app.post(settings.webhook_path)

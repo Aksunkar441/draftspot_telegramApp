@@ -63,6 +63,18 @@ create table event_favorites (
     unique (event_id, user_id)
 );
 
+create table venue_checkins (
+    id bigserial primary key,
+    user_id bigint references users(id) on delete cascade,
+    venue_id bigint references venues(id) on delete cascade,
+    checked_date date not null,
+    latitude double precision not null,
+    longitude double precision not null,
+    distance_meters int not null,
+    created_at timestamptz default now(),
+    unique (user_id, venue_id, checked_date)
+);
+
 create index idx_events_status on events(status);
 create index idx_events_captain on events(captain_id);
 create index idx_applications_event on event_applications(event_id);
@@ -73,3 +85,5 @@ create index idx_applications_user_event on event_applications(user_id, event_id
 create index idx_venues_city on venues(city);
 create index idx_favorites_user_created on event_favorites(user_id, created_at desc);
 create index idx_favorites_event on event_favorites(event_id);
+create index idx_checkins_user_date on venue_checkins(user_id, checked_date desc);
+create index idx_checkins_venue_date on venue_checkins(venue_id, checked_date desc);

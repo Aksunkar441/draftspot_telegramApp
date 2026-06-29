@@ -3,6 +3,7 @@ from app.models.venue import Venue, VenueStatus
 from app.models.event import Event, EventStatus
 from app.models.application import EventApplication, ApplicationStatus
 from app.models.favorite import EventFavorite
+from app.models.checkin import VenueCheckin
 
 __all__ = [
     "User",
@@ -13,4 +14,5 @@ __all__ = [
     "EventApplication",
     "ApplicationStatus",
     "EventFavorite",
+    "VenueCheckin",
 ]

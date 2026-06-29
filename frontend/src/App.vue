@@ -7,6 +7,12 @@
         </svg>
         <span>Лента</span>
       </router-link>
+      <router-link class="activity-link" to="/activity" aria-label="Активность">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v18M3 12h18M6 6l12 12M18 6 6 18" />
+        </svg>
+        <span>Активность</span>
+      </router-link>
       <router-link to="/create" aria-label="Создать">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />
@@ -75,6 +81,18 @@ userStore.load();
   background: rgba(255, 255, 255, 0.18);
   transform: scale(1.04);
 }
+.rail a.activity-link {
+  width: 44px;
+  height: 44px;
+  margin: 3px -3px;
+  border-radius: 22px;
+  color: #111;
+  background: #fff;
+}
+.rail a.activity-link.router-link-active {
+  color: #fff;
+  background: #2f9e68;
+}
 .rail svg {
   width: 20px;
   height: 20px;
@@ -87,6 +105,11 @@ userStore.load();
 .rail a:first-child svg {
   fill: currentColor;
   stroke-width: 1.5;
+}
+.rail a.activity-link svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 2.2;
 }
 .rail span {
   position: absolute;
@@ -155,6 +178,11 @@ userStore.load();
   .rail a {
     width: 34px;
     height: 34px;
+  }
+  .rail a.activity-link {
+    width: 40px;
+    height: 40px;
+    margin: 3px -2px;
   }
   .rail span {
     display: none;
