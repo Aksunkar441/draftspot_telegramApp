@@ -53,7 +53,10 @@ Create `frontend/.env.local`:
 
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:8000/api
+VITE_GOOGLE_MAPS_API_KEY=optional-google-maps-browser-key
 ```
+
+`VITE_GOOGLE_MAPS_API_KEY` enables the Google Maps layer on the activity/check-in page. Without it, the page keeps the local map mock so UI development still works offline.
 
 Run:
 
